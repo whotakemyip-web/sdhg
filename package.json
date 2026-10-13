@@ -1,0 +1,58 @@
+{
+  "name": "win-dynamic-island-md3",
+  "productName": "DynamicIsland MD3",
+  "version": "1.1.0",
+  "description": "Dynamic Island style widget for Windows with Material You (Material Design 3) theming",
+  "main": "main.js",
+  "author": "You",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "dist": "electron-builder --win zip portable"
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "@material/material-color-utilities": "^0.2.0"
+  },
+  "build": {
+    "appId": "com.yourname.dynamicislandmd3",
+    "productName": "DynamicIsland MD3",
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**/*",
+      "renderer/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/tray-icon.png"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

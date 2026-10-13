@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'" />
+<title>DynamicIsland MD3 · Flower</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body data-theme="sakura" data-mode="light" data-style="flower">
+
+  <!-- Цветок: один символ, цвет задаётся через fill у <use> -->
+  <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
+    <symbol id="flower" viewBox="0 0 64 64">
+      <g>
+        <ellipse cx="32" cy="14" rx="9" ry="13" />
+        <ellipse cx="32" cy="14" rx="9" ry="13" transform="rotate(72 32 32)" />
+        <ellipse cx="32" cy="14" rx="9" ry="13" transform="rotate(144 32 32)" />
+        <ellipse cx="32" cy="14" rx="9" ry="13" transform="rotate(216 32 32)" />
+        <ellipse cx="32" cy="14" rx="9" ry="13" transform="rotate(288 32 32)" />
+      </g>
+      <circle class="flower-core" cx="32" cy="32" r="8" />
+    </symbol>
+  </svg>
+
+  <div id="island" class="island collapsed">
+
+    <!-- Цветочные украшения (видны только в стиле Flower) -->
+    <div class="bloom-layer" aria-hidden="true">
+      <svg class="bloom bloom-a"><use href="#flower" /></svg>
+      <svg class="bloom bloom-b"><use href="#flower" /></svg>
+      <svg class="bloom bloom-c"><use href="#flower" /></svg>
+    </div>
+
+    <!-- Свёрнутое состояние: «живая активность» -->
+    <div id="pillView" class="pill-view" role="button" tabindex="0" aria-label="Развернуть остров">
+      <div class="pill-inner drag-handle">
+        <svg class="pill-flower"><use href="#flower" /></svg>
+
+        <div id="pillDefault" class="pill-slot">
+          <span id="clock" class="clock">--:--</span>
+          <span id="cpuMini" class="mini-chip">CPU --%</span>
+        </div>
+
+        <div id="pillMedia" class="pill-slot hidden">
+          <span class="eq" id="pillEq"><i></i><i></i><i></i></span>
+          <span id="pillMediaText" class="pill-text">—</span>
+        </div>
+
+        <div id="pillTimer" class="pill-slot hidden">
+          <span class="pill-ico">⏱</span>
+          <span id="pillTimerText" class="clock">25:00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Развёрнутое состояние -->
+    <div id="expandedView" class="expanded-view">
+
+      <header class="exp-header drag-handle">
+        <div class="header-left">
+          <span class="big-clock" id="bigClock">--:--:--</span>
+          <span class="date-line" id="dateLine">—</span>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" id="pinBtn" title="Поверх всех окон: включено" aria-pressed="true">📌</button>
+          <button class="icon-btn" id="collapseBtn" title="Свернуть">⌄</button>
+        </div>
+      </header>
+
+      <nav class="tabs" id="tabs">
+        <span class="tab-indicator" id="tabIndicator"></span>
+        <button class="tab-btn active" data-tab="center">Центр</button>
+        <button class="tab-btn" data-tab="todos">Задачи</button>
+        <button class="tab-btn" data-tab="launcher">Лаунчер</button>
+        <button class="tab-btn" data-tab="clipboard">Буфер</button>
+        <button class="tab-btn" data-tab="notes">Заметки</button>
+        <button class="tab-btn" data-tab="focus">Фокус</button>
+        <button class="tab-btn" data-tab="settings">Настройки</button>
+      </nav>
+
+      <div class="panels">
+
+        <!-- =================== ЦЕНТР УПРАВЛЕНИЯ =================== -->
+        <section class="tab-panel" data-panel="center">
+
+          <div class="tiles">
+            <button class="tile" id="tileWifi" aria-pressed="false">
+              <span class="tile-ico">📶</span><span class="tile-name">Wi-Fi</span><span class="tile-sub" id="tileWifiSub">…</span>
+            </button>
+            <button class="tile" id="tileBt" aria-pressed="false">
+              <span class="tile-ico">🔷</span><span class="tile-name">Bluetooth</span><span class="tile-sub" id="tileBtSub">…</span>
+            </button>
+            <button class="tile" id="tileDnd" aria-pressed="false">
+              <span class="tile-ico">🔕</span><span class="tile-name">Не беспокоить</span><span class="tile-sub" id="tileDndSub">эксперим.</span>
+            </button>
+            <button class="tile" id="tileAwake" aria-pressed="false">
+              <span class="tile-ico">☕</span><span class="tile-name">Не засыпать</span><span class="tile-sub" id="tileAwakeSub">выкл</span>
+            </button>
+            <button class="tile" id="tileDark" aria-pressed="false">
+              <span class="tile-ico">🌙</span><span class="tile-name">Тёмная тема</span><span class="tile-sub" id="tileDarkSub">выкл</span>
+            </button>
+            <button class="tile" id="tileShot">
+              <span class="tile-ico">📸</span><span class="tile-name">Скриншот</span><span class="tile-sub">буфер + файл</span>
+            </button>
+          </div>
+          <p class="status-line" id="ccStatus"></p>
+
+          <div class="card slider-card" id="brightnessCard">
+            <span class="sl-ico" aria-hidden="true">☀️</span>
+            <input type="range" id="brightnessRange" class="md-range" min="0" max="100" step="1" value="50" aria-label="Яркость" />
+            <span class="sl-val" id="brightnessVal">—</span>
+          </div>
+          <div class="card slider-card" id="volumeCard">
+            <button class="sl-btn" id="volMuteBtn" title="Выключить / включить звук" aria-label="Звук">🔊</button>
+            <input type="range" id="volumeRange" class="md-range" min="0" max="100" step="1" value="50" aria-label="Громкость" />
+            <span class="sl-val" id="volumeVal">—</span>
+          </div>
+
+          <div class="card media-card">
+            <div class="media-art" id="mediaArt">
+              <img id="mediaImg" class="media-img hidden" alt="" />
+              <span id="mediaGlyph" class="media-glyph">♪</span>
+            </div>
+            <div class="media-meta">
+              <div class="media-title" id="mediaTitle">Ничего не играет</div>
+              <div class="media-sub" id="mediaSub">Запусти музыку или видео — название появится здесь</div>
+              <div class="progress" id="mediaProgress"><i id="mediaProgFill"></i></div>
+              <div class="progress-times"><span id="mediaPos">0:00</span><span id="mediaDur">0:00</span></div>
+            </div>
+          </div>
+          <div class="media-controls">
+            <button class="icon-btn lg" id="mkPrev" title="Предыдущий">⏮</button>
+            <button class="icon-btn lg primary" id="mkPlay" title="Пауза / играть">⏯</button>
+            <button class="icon-btn lg" id="mkNext" title="Следующий">⏭</button>
+          </div>
+          <p class="status-line" id="mediaStatus"></p>
+
+          <div class="card stats-card">
+            <div class="stat-line"><span class="stat-name">CPU</span><div class="bar"><i id="barCpu"></i></div><b id="cpuVal">0%</b></div>
+            <div class="stat-line"><span class="stat-name">RAM</span><div class="bar"><i id="barMem"></i></div><b id="memVal">0%</b></div>
+            <svg class="spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true">
+              <polyline id="sparkMem" class="spark-line spark-b" points="" />
+              <polyline id="sparkCpu" class="spark-line spark-a" points="" />
+            </svg>
+            <div class="stat-meta">
+              <span id="memDetail">— / — ГБ</span>
+              <span id="batteryVal">🔋 —</span>
+              <span id="uptimeVal">⏳ —</span>
+              <span id="hostVal">—</span>
+            </div>
+          </div>
+
+          <div class="section-title">Быстрые действия</div>
+          <div class="chips">
+            <button class="chip-btn" id="qaLock">🔒 Блокировка</button>
+            <button class="chip-btn" id="qaSleep">🌙 Сон</button>
+            <button class="chip-btn" id="qaNotify">🔔 Тест уведомления</button>
+          </div>
+          <div class="section-title">Инструменты</div>
+          <div class="chips">
+            <button class="chip-btn" data-tool="taskmgr">📊 Диспетчер задач</button>
+            <button class="chip-btn" data-tool="calc">🧮 Калькулятор</button>
+            <button class="chip-btn" data-tool="settings">⚙️ Параметры</button>
+            <button class="chip-btn" data-tool="explorer">📁 Проводник</button>
+            <button class="chip-btn" data-tool="snip">✂️ Вырезка</button>
+          </div>
+          <p class="status-line" id="qaStatus"></p>
+        </section>
+
+        <!-- =================== ЗАДАЧИ =================== -->
+        <section class="tab-panel hidden" data-panel="todos">
+          <div class="todo-add-row">
+            <input type="text" id="todoInput" class="text-input" maxlength="500" placeholder="Новая задача…" />
+            <button class="icon-btn" id="todoAddBtn">+</button>
+          </div>
+          <ul class="todo-list" id="todoList"></ul>
+        </section>
+
+        <!-- =================== ЛАУНЧЕР =================== -->
+        <section class="tab-panel hidden" data-panel="launcher">
+          <div class="launcher-grid" id="launcherGrid"></div>
+          <button class="md-button outlined btn-block" id="launcherAddBtn">+ Добавить приложение</button>
+          <p class="status-line" id="launcherStatus"></p>
+        </section>
+
+        <!-- =================== БУФЕР ОБМЕНА =================== -->
+        <section class="tab-panel hidden" data-panel="clipboard">
+          <div id="clipOff" class="card clip-consent">
+            <div class="clip-consent-title">История буфера обмена выключена</div>
+            <p class="hint">Если включить, остров будет читать копируемый текст и хранить последние 20 записей
+              в памяти. В историю могут попасть пароли и другие личные данные. Записи удаляются автоматически
+              через выбранный срок; историю можно поставить на паузу, очистить или отключить в любой момент.</p>
+            <button class="md-button" id="clipEnableBtn">Включить историю…</button>
+          </div>
+
+          <div id="clipOn" class="hidden">
+            <div class="toggle-row">
+              <span>Пауза записи</span>
+              <label class="switch"><input type="checkbox" id="clipPauseToggle"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <span>Удалять записи через</span>
+              <select id="clipTtlSelect" class="select-input">
+                <option value="5">5 минут</option>
+                <option value="60">1 час</option>
+                <option value="1440">1 день</option>
+                <option value="10080">7 дней</option>
+              </select>
+            </div>
+            <div class="toggle-row">
+              <span>Хранить между запусками <small class="exp-badge">зашифровано</small></span>
+              <label class="switch"><input type="checkbox" id="clipPersistToggle"><span class="slider"></span></label>
+            </div>
+            <div class="row-end clip-actions">
+              <button class="md-button outlined" id="clipClearBtn">Очистить историю</button>
+              <button class="md-button outlined" id="clipDisableBtn">Отключить</button>
+            </div>
+            <p class="status-line" id="clipStatus"></p>
+            <ul class="clip-list" id="clipList"></ul>
+          </div>
+        </section>
+
+        <!-- =================== ЗАМЕТКИ =================== -->
+        <section class="tab-panel hidden" data-panel="notes">
+          <textarea id="notesArea" class="notes-area" maxlength="50000" placeholder="Быстрая заметка…"></textarea>
+          <div class="row-end"><button class="md-button" id="saveNoteBtn">Сохранить</button></div>
+        </section>
+
+        <!-- =================== ФОКУС =================== -->
+        <section class="tab-panel hidden" data-panel="focus">
+          <div class="card focus-timer">
+            <div class="focus-time" id="focusTime">25:00</div>
+            <div class="focus-presets" id="focusPresets">
+              <button class="chip-btn" data-min="15">15</button>
+              <button class="chip-btn" data-min="25">25</button>
+              <button class="chip-btn" data-min="45">45</button>
+              <button class="chip-btn" data-min="60">60</button>
+              <span class="focus-unit">мин</span>
+            </div>
+            <div class="focus-controls">
+              <button class="md-button" id="focusStart">Старт</button>
+              <button class="md-button outlined" id="focusReset">Сброс</button>
+            </div>
+            <p class="hint tight">Пока таймер идёт, он виден в свёрнутой капсуле (отключается в Настройки → Остров).</p>
+          </div>
+        </section>
+
+        <!-- =================== НАСТРОЙКИ (внутри острова) =================== -->
+        <section class="tab-panel hidden" data-panel="settings">
+
+          <div class="segmented" id="settingsSeg">
+            <button class="seg-btn active" data-sub="look">🌸 Оформление</button>
+            <button class="seg-btn" data-sub="island">🏝 Остров</button>
+            <button class="seg-btn" data-sub="system">⚙️ Система</button>
+          </div>
+
+          <!-- ---- Оформление ---- -->
+          <div class="sub-panel" data-sub="look">
+
+            <div class="card">
+              <div class="section-title">Стиль</div>
+              <div class="segmented small" id="styleSeg">
+                <button class="seg-btn" data-ui-style="flower">🌸 Flower</button>
+                <button class="seg-btn" data-ui-style="classic">▣ Classic MD3</button>
+              </div>
+              <div class="section-title mt-10">Режим</div>
+              <div class="segmented small" id="modeSeg">
+                <button class="seg-btn" data-mode-choice="light">☀️ Светлая</button>
+                <button class="seg-btn" data-mode-choice="dark">🌙 Тёмная</button>
+                <button class="seg-btn" data-mode-choice="system">🖥 Авто</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-title">Палитра</div>
+              <div class="theme-grid" id="themeGrid">
+                <button class="swatch" data-theme="sakura">Sakura</button>
+                <button class="swatch" data-theme="lavender">Lavender</button>
+                <button class="swatch" data-theme="peach">Peach</button>
+                <button class="swatch" data-theme="mint">Mint</button>
+                <button class="swatch monet" data-theme="monet" id="monetSwatch">Monet</button>
+                <button class="swatch" data-theme="purple">Purple</button>
+                <button class="swatch" data-theme="blue">Blue</button>
+                <button class="swatch" data-theme="green">Green</button>
+                <button class="swatch" data-theme="orange">Orange</button>
+                <button class="swatch" data-theme="teal">Teal</button>
+                <button class="swatch" data-theme="red">Red</button>
+              </div>
+
+              <div class="monet-box">
+                <div class="monet-row">
+                  <span id="monetSeedDot" class="monet-dot"></span>
+                  <span>Monet — палитра из текущих обоев рабочего стола. В стиле Flower она автоматически смягчается до пастели.</span>
+                </div>
+                <button class="md-button outlined" id="monetRefresh">🎨 Извлечь из обоев</button>
+                <div class="toggle-row flush">
+                  <span>Авто-обновление при смене обоев</span>
+                  <label class="switch"><input type="checkbox" id="monetAutoWatchToggle"><span class="slider"></span></label>
+                </div>
+                <p class="hint tight">Проверка файла обоев раз в ~20 секунд.</p>
+                <p class="status-line" id="monetStatus"></p>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="opacity-row">
+                <span>Прозрачность острова</span>
+                <input type="range" id="opacityRange" class="md-range" min="0.6" max="1" step="0.02" />
+              </div>
+            </div>
+          </div>
+
+          <!-- ---- Остров ---- -->
+          <div class="sub-panel hidden" data-sub="island">
+            <div class="card">
+              <div class="toggle-row"><span>Сворачивать при потере фокуса</span>
+                <label class="switch"><input type="checkbox" id="collapseOnBlurToggle"><span class="slider"></span></label></div>
+              <div class="toggle-row"><span>Живая активность в капсуле <small class="exp-badge">таймер · музыка</small></span>
+                <label class="switch"><input type="checkbox" id="pillLiveToggle"><span class="slider"></span></label></div>
+              <div class="toggle-row"><span>«Сейчас играет» <small class="exp-badge">название и обложка</small></span>
+                <label class="switch"><input type="checkbox" id="nowPlayingToggle"><span class="slider"></span></label></div>
+              <div class="toggle-row"><span>Горячая клавиша <code>Ctrl+Alt+I</code></span>
+                <label class="switch"><input type="checkbox" id="hotkeyToggle"><span class="slider"></span></label></div>
+              <div class="toggle-row"><span>Поверх всех окон</span>
+                <label class="switch"><input type="checkbox" id="pinToggle"><span class="slider"></span></label></div>
+            </div>
+            <p class="hint">Нажми на капсулу — остров раскроется, настройки откроются прямо в нём, без отдельных окон.
+              Перетаскивай остров за капсулу или за шапку.</p>
+          </div>
+
+          <!-- ---- Система ---- -->
+          <div class="sub-panel hidden" data-sub="system">
+            <div class="card">
+              <div class="toggle-row"><span>Автозапуск с Windows</span>
+                <label class="switch"><input type="checkbox" id="autoLaunchToggle"><span class="slider"></span></label></div>
+              <div class="toggle-row">
+                <span>Менять тему Windows тоже <small class="exp-badge">реально</small></span>
+                <label class="switch"><input type="checkbox" id="syncWinTheme"><span class="slider"></span></label>
+              </div>
+              <p class="status-line" id="themeSyncStatus"></p>
+              <div class="section-title">Имя адаптера Wi-Fi</div>
+              <input type="text" id="wifiIfname" class="text-input" maxlength="64" placeholder="Wi-Fi" />
+              <p class="status-line" id="wifiStatus"></p>
+            </div>
+            <div class="card">
+              <p class="hint flush-top">Wi-Fi и Bluetooth переключаются через <code>netsh</code> / <code>Get-PnpDevice</code> и требуют
+                подтверждения UAC. «Не беспокоить» отключает баннеры уведомлений через реестр пользователя (экспериментально).
+                Яркость работает на встроенных экранах ноутбуков; на внешних мониторах недоступна.</p>
+              <div class="row-end"><button class="md-button outlined" id="quitBtn">Закрыть приложение</button></div>
+            </div>
+          </div>
+
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+<script src="app.js"></script>
+<script src="control.js"></script>
+</body>
+</html>
